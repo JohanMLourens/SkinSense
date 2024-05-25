@@ -17,7 +17,7 @@ import torch.nn.functional as F
 
 # Define the path to the training folder
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
-model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/Model'
+model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
 # Define the image size
 img_size = (120, 90)
 
@@ -122,12 +122,14 @@ for epoch in range(1, epochs + 1):
 
 print('Training completed.')
 
-# Save trained model
-torch.save(model.state_dict(), 'Trained_model.pt')
+# Save the model
+model_save_path = os.path.join(model_path, 'Trained_model.pt')
+torch.save(model.state_dict(), model_save_path)
 print('Save Successful')
 
-# Load model
-new_model = Model()
-new_model.load_state_dict(torch.load('Trained_model.pt'))
-print('Load successful')
+# Load the model
+new_model = Model(num_classes=len(classes)).to(device)
+new_model.load_state_dict(torch.load(model_save_path, map_location=device))
 new_model.eval()
+print('Load successful')
+
