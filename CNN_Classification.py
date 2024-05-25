@@ -110,7 +110,7 @@ training_loss = []
 validation_loss = []
 
 # Number of epochs to train
-epochs = 1
+epochs = 50
 print('Training on', device)
 
 for epoch in range(1, epochs + 1):
@@ -132,4 +132,3 @@ new_model = Model(num_classes=len(classes)).to(device)
 new_model.load_state_dict(torch.load(model_save_path, map_location=device))
 new_model.eval()
 print('Load successful')
-
