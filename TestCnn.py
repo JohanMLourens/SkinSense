@@ -18,7 +18,7 @@ import torch.nn.functional as F
 # Define the path to the test data folder
 test_data_folder = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/TestDataResized'
 # Define the path to the saved model
-saved_model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model/BackUps/Trained_model_75%.pt'
+saved_model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model/BackUps/Trained_model_79%.pt'
 # Define the image size
 img_size = (120, 90)
 
@@ -100,9 +100,25 @@ print('Confusion Matrix:')
 print(conf_matrix)
 
 # Plot confusion matrix
-plt.figure(figsize=(10, 8))
-sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
-plt.xlabel('Predicted')
-plt.ylabel('Actual')
-plt.title('Confusion Matrix')
+
+
+truelabels = []
+predictions = []
+model.eval()
+print("Getting predictions from test set...")
+for data, target in test_loader:
+    for label in target.data.numpy():
+        truelabels.append(label)
+    for prediction in model(data).data.numpy().argmax(1):
+        predictions.append(prediction) 
+
+# Plot the confusion matrix
+cm = confusion_matrix(truelabels, predictions)
+tick_marks = np.arange(len(classes))
+
+df_cm = pd.DataFrame(cm, index = classes, columns = classes)
+plt.figure(figsize = (7,7))
+sns.heatmap(df_cm, annot=True, cmap=plt.cm.Blues, fmt='g')
+plt.xlabel("Predicted Shape", fontsize = 20)
+plt.ylabel("True Shape", fontsize = 20)
 plt.show()

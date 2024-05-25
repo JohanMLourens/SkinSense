@@ -110,7 +110,7 @@ training_loss = []
 validation_loss = []
 
 # Number of epochs to train
-epochs = 50
+epochs = 10
 print('Training on', device)
 
 for epoch in range(1, epochs + 1):
@@ -132,3 +132,12 @@ new_model = Model(num_classes=len(classes)).to(device)
 new_model.load_state_dict(torch.load(model_save_path, map_location=device))
 new_model.eval()
 print('Load successful')
+
+# Plot training and validation losses
+plt.figure(figsize=(15,15))
+plt.plot(epoch_nums, training_loss)
+plt.plot(epoch_nums, validation_loss)
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.legend(['training', 'validation'], loc='upper right')
+plt.show()
