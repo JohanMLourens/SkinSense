@@ -153,7 +153,7 @@ validation_loss = []
 validation_accuracy = []
 
 # Number of epochs to train
-epochs = 50  # Adjust this number as needed
+epochs = 10  # Adjust this number as needed
 print('Training on', device)
 
 for epoch in range(1, epochs + 1):
