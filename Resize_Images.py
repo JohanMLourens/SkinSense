@@ -20,7 +20,7 @@ training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerDa
 train_folder = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
 
 # Desired size for the resized images
-size = (120, 90)
+size = (300, 225)
 
 # Remove the output folder if it exists, then recreate it
 if os.path.exists(train_folder):
