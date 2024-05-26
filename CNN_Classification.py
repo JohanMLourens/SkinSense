@@ -25,12 +25,12 @@ print("Classes:", classes)
 
 print("Libraries imported - ready to use PyTorch", torch.__version__)
 
-# Use a more complex pretrained model (ResNet50)
-class ResNet50Model(nn.Module):
+# Use a more complex pretrained model (VGG16)
+class VGG16Model(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNet50Model, self).__init__()
-        self.model = models.resnet50(pretrained=True)
-        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+        super(VGG16Model, self).__init__()
+        self.model = models.vgg16(pretrained=True)
+        self.model.classifier[6] = nn.Linear(self.model.classifier[6].in_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
@@ -39,7 +39,7 @@ class ResNet50Model(nn.Module):
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Initialize model, loss function, optimizer, and learning rate scheduler
-model = ResNet50Model(num_classes=3).to(device)
+model = VGG16Model(num_classes=3).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=0.0001)
 scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.2, verbose=True)
@@ -51,7 +51,7 @@ transform = transforms.Compose([
     #transforms.RandomVerticalFlip(),
     #transforms.RandomRotation(20),
     #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-    #Stransforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+    #transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -153,7 +153,7 @@ validation_loss = []
 validation_accuracy = []
 
 # Number of epochs to train
-epochs = 10  # Adjust this number as needed
+epochs = 5  # Adjust this number as needed
 print('Training on', device)
 
 for epoch in range(1, epochs + 1):
@@ -198,7 +198,7 @@ torch.save(model.state_dict(), model_save_path)
 print('Save Successful')
 
 # Load the model
-new_model = ResNet50Model(num_classes=len(classes)).to(device)
+new_model = VGG16Model(num_classes=len(classes)).to(device)
 new_model.load_state_dict(torch.load(model_save_path, map_location=device))
 new_model.eval()
 print('Load successful')
