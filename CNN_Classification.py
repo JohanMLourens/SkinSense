@@ -28,7 +28,7 @@ print(classes)
 print("Libraries imported - ready to use PyTorch", torch.__version__)
 
 class Model(nn.Module):
-    def __init__(self, num_classes=3):
+    def __init__(self, num_classes=7):
         super(Model, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=3, stride=1, padding=1)
