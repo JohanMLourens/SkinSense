@@ -19,7 +19,7 @@ model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
 img_size = (300, 225)
 
 # List the classes from the training folder
-classes = ['akiec', 'bcc', 'bkl', 'df', 'mel', 'nv', 'vasc']
+classes = ['akiec', 'bcc', 'mel']
 num_classes = len(classes)
 print("Classes:", classes)
 
@@ -27,7 +27,7 @@ print("Libraries imported - ready to use PyTorch", torch.__version__)
 
 # Use a more complex pretrained model (ResNet50)
 class ResNet50Model(nn.Module):
-    def __init__(self, num_classes=7):
+    def __init__(self, num_classes=3):
         super(ResNet50Model, self).__init__()
         self.model = models.resnet50(pretrained=True)
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
@@ -39,19 +39,19 @@ class ResNet50Model(nn.Module):
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Initialize model, loss function, optimizer, and learning rate scheduler
-model = ResNet50Model(num_classes=7).to(device)
+model = ResNet50Model(num_classes=3).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=0.0001)
 scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.2, verbose=True)
 
 # Define transforms for data augmentation and normalization
 transform = transforms.Compose([
-    transforms.Resize(img_size),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(20),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-    transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+    #transforms.Resize(img_size),
+    #transforms.RandomHorizontalFlip(),
+    #transforms.RandomVerticalFlip(),
+    #transforms.RandomRotation(20),
+    #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
+    #Stransforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
