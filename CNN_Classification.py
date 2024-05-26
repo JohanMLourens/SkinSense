@@ -8,7 +8,6 @@ import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torchvision import models
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -16,7 +15,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
 model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
 # Define the image size
-img_size = (300, 225)
+img_size = (299, 299)  # Inception v3 requires a minimum input size of 299x299
 
 # List the classes from the training folder
 classes = ['akiec', 'bcc', 'mel']
@@ -25,33 +24,38 @@ print("Classes:", classes)
 
 print("Libraries imported - ready to use PyTorch", torch.__version__)
 
-# Use a more complex pretrained model (VGG16)
-class VGG16Model(nn.Module):
+# Use a more complex pretrained model (Inception v3)
+class InceptionV3Model(nn.Module):
     def __init__(self, num_classes=3):
-        super(VGG16Model, self).__init__()
-        self.model = models.vgg16(pretrained=True)
-        self.model.classifier[6] = nn.Linear(self.model.classifier[6].in_features, num_classes)
+        super(InceptionV3Model, self).__init__()
+        self.model = models.inception_v3(pretrained=True)
+        self.model.aux_logits = True  # Enable auxiliary logits
+        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
     def forward(self, x):
-        return self.model(x)
+        if self.training and self.model.aux_logits:
+            x, aux = self.model(x)
+            return x, aux
+        else:
+            return self.model(x)
 
 # Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Initialize model, loss function, optimizer, and learning rate scheduler
-model = VGG16Model(num_classes=3).to(device)
+model = InceptionV3Model(num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=0.0001)
 scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.2, verbose=True)
 
 # Define transforms for data augmentation and normalization
 transform = transforms.Compose([
-    #transforms.Resize(img_size),
-    #transforms.RandomHorizontalFlip(),
-    #transforms.RandomVerticalFlip(),
-    #transforms.RandomRotation(20),
-    #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-    #transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+    transforms.Resize(img_size),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomVerticalFlip(),
+    transforms.RandomRotation(20),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
+    transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -109,8 +113,14 @@ def train(model, device, train_loader, optimizer, epoch, loss_criteria, schedule
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model(data)
-        loss = loss_criteria(output, target)
+        if model.model.aux_logits:
+            output, aux_output = model(data)
+            loss1 = loss_criteria(output, target)
+            loss2 = loss_criteria(aux_output, target)
+            loss = loss1 + 0.4 * loss2
+        else:
+            output = model(data)
+            loss = loss_criteria(output, target)
         train_loss += loss.item()
         loss.backward()
         optimizer.step()
@@ -198,7 +208,7 @@ torch.save(model.state_dict(), model_save_path)
 print('Save Successful')
 
 # Load the model
-new_model = VGG16Model(num_classes=len(classes)).to(device)
+new_model = InceptionV3Model(num_classes=len(classes)).to(device)
 new_model.load_state_dict(torch.load(model_save_path, map_location=device))
 new_model.eval()
 print('Load successful')
