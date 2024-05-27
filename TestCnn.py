@@ -1,29 +1,24 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import image as mp_image
 import seaborn as sns
-from sklearn import metrics
-from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
 import os
-import shutil
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 
 # Define the path to the test data folder
 test_data_folder = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/TestDataResized'
 # Define the path to the saved model
-saved_model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model/BackUps/Trained_model_79%.pt'
+saved_model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model/cnn_model.pth'
 # Define the image size
-img_size = (120, 90)
+img_size = (300, 225)
 
 # List the classes (should be the same as during training)
-classes = ['akiec', 'bcc', 'bkl', 'df', 'mel', 'nv', 'vasc']
+classes = ['akiec', 'bcc', 'mel']
 print("Classes:", classes)
 
 print("Libraries imported - ready to use PyTorch", torch.__version__)
@@ -35,14 +30,18 @@ class Model(nn.Module):
         self.conv2 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2)
         self.drop = nn.Dropout2d(p=0.2)
-        self.flattened_size = 30 * 22 * 24  # Adjusted to fit 120x90 image size
+        self.flattened_size = self._get_flattened_size((3, 300, 225))
         self.fc = nn.Linear(in_features=self.flattened_size, out_features=num_classes)
 
+    def _get_flattened_size(self, shape):
+        x = torch.zeros(1, *shape)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        return int(torch.prod(torch.tensor(x.shape[1:])))
+
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.pool(F.relu(x))
-        x = self.conv2(x)
-        x = self.pool(F.relu(x))
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
         x = self.drop(x)
         x = x.view(-1, self.flattened_size)
         x = self.fc(x)
@@ -60,6 +59,7 @@ print('Model loaded successfully from', saved_model_path)
 transform = transforms.Compose([
     transforms.Resize(img_size),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 # Create test dataset and dataloader
@@ -99,26 +99,16 @@ conf_matrix = confusion_matrix(all_targets, all_preds)
 print('Confusion Matrix:')
 print(conf_matrix)
 
-# Plot confusion matrix
-
-
-truelabels = []
-predictions = []
-model.eval()
-print("Getting predictions from test set...")
-for data, target in test_loader:
-    for label in target.data.numpy():
-        truelabels.append(label)
-    for prediction in model(data).data.numpy().argmax(1):
-        predictions.append(prediction) 
+# Calculate percentages for the confusion matrix
+conf_matrix_percent = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis] * 100
 
 # Plot the confusion matrix
-cm = confusion_matrix(truelabels, predictions)
-tick_marks = np.arange(len(classes))
+df_cm = pd.DataFrame(conf_matrix, index=classes, columns=classes)
+df_cm_percent = pd.DataFrame(conf_matrix_percent, index=classes, columns=classes)
 
-df_cm = pd.DataFrame(cm, index = classes, columns = classes)
-plt.figure(figsize = (7,7))
-sns.heatmap(df_cm, annot=True, cmap=plt.cm.Blues, fmt='g')
-plt.xlabel("Predicted Shape", fontsize = 20)
-plt.ylabel("True Shape", fontsize = 20)
+plt.figure(figsize=(10, 7))
+sns.heatmap(df_cm, annot=df_cm_percent, fmt='.2f', cmap='Blues', annot_kws={"size": 16})
+plt.xlabel("Predicted", fontsize=14)
+plt.ylabel("True", fontsize=14)
+plt.title("Confusion Matrix with Percentages", fontsize=16)
 plt.show()
