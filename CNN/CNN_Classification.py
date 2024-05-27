@@ -16,16 +16,18 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# Define the path to the training folder
+# The path to the training folder
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
-# Define the path and filename for saving the model
+
+# The path and filename for saving the model
 model_dir = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
-model_filename = 'cnn_model.pth'
-model_path = os.path.join(model_dir, model_filename)
-# Define the image size
+model_filename = 'cnn_model.pth' # Name of the model
+model_path = os.path.join(model_dir, model_filename) # joins the 2 string togther
+
+# The image size
 img_size = (300, 225)
 
-# List the classes from the training folder
+# The classes from the training folder
 classes = sorted(os.listdir(training_folder_name))
 print("Classes:", classes)
 
@@ -33,27 +35,28 @@ print("Libraries imported - ready to use PyTorch", torch.__version__)
 
 class Model(nn.Module):
     def __init__(self, num_classes=3):
-        super(Model, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=3, stride=1, padding=1)
+        super(Model, self).__init__() 
+        # convolutional layers
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=3, stride=1, padding=1) # 3 inputs for the RGB values 
         self.conv2 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2)
         self.drop = nn.Dropout2d(p=0.2)
         # Calculate the flattened size after convolution and pooling
-        self.flattened_size = self._get_flattened_size((3, 300, 225))
+        self.flattened_size = self._get_flattened_size((3, 300, 225)) # Calculates the flattened size for you
         self.fc = nn.Linear(in_features=self.flattened_size, out_features=num_classes)
 
     def _get_flattened_size(self, shape):
-        x = torch.zeros(1, *shape)
+        x = torch.zeros(1, *shape)          # Creates a tensor with shape (1, 3, 300, 225), where 1 is the batch size.
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         return int(torch.prod(torch.tensor(x.shape[1:])))
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.drop(x)
-        x = x.view(-1, self.flattened_size)
-        x = self.fc(x)
+        x = self.pool(F.relu(self.conv1(x))) # Applies the first convolutional layer, followed by a ReLU activation function and max pooling.
+        x = self.pool(F.relu(self.conv2(x))) # Applies the second convolutional layer, followed by ReLU activation and max pooling.
+        x = self.drop(x)                    # Applies dropout to the resulting tensor.
+        x = x.view(-1, self.flattened_size) # lattens the tensor to the shape so that it can be passed to the fully connected layer.
+        x = self.fc(x)                      # Passes the flattened tensor through the fully connected layer.
         return F.log_softmax(x, dim=1)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
