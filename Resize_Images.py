@@ -17,10 +17,10 @@ def resize_image(src_image, size=(600, 450), bg_color="white"):
 
 # Directories
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/Trainning'
-train_folder = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
+train_folder = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/TestDataResized'
 
 # Desired size for the resized images
-size = (300, 225)
+size = (300, 300)
 
 # Remove the output folder if it exists, then recreate it
 if os.path.exists(train_folder):
