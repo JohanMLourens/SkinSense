@@ -19,7 +19,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 # Define the path to the training folder
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
 # Define the path and filename for saving the model
-model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/Model/Trained_model.pt'
+model_dir = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
+model_filename = 'cnn_model.pth'
+model_path = os.path.join(model_dir, model_filename)
 # Define the image size
 img_size = (300, 225)
 
@@ -143,8 +145,8 @@ for epoch in range(1, epochs + 5):
     scheduler.step(test_loss)
 
 # Ensure model save path exists
-if not os.path.exists(os.path.dirname(model_path)):
-    os.makedirs(os.path.dirname(model_path))
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 
 # Save trained model
 torch.save(model.state_dict(), model_path)
