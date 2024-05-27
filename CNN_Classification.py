@@ -1,106 +1,70 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import image as mp_image
 import seaborn as sns
+from sklearn import metrics
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.model_selection import train_test_split
 import os
+import shutil
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torchvision import models
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # Define the path to the training folder
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
-model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
+# Define the path and filename for saving the model
+model_dir = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
+model_filename = 'cnn_model.pth'
+model_path = os.path.join(model_dir, model_filename)
 # Define the image size
 img_size = (300, 225)
 
 # List the classes from the training folder
-classes = ['akiec', 'bcc', 'mel']
-num_classes = len(classes)
+classes = sorted(os.listdir(training_folder_name))
 print("Classes:", classes)
 
 print("Libraries imported - ready to use PyTorch", torch.__version__)
 
-# Use a more complex pretrained model (ResNet50)
-class ResNet50Model(nn.Module):
+class Model(nn.Module):
     def __init__(self, num_classes=3):
-        super(ResNet50Model, self).__init__()
-        self.model = models.resnet50(pretrained=True)
-        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+        super(Model, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2)
+        self.drop = nn.Dropout2d(p=0.2)
+        # Calculate the flattened size after convolution and pooling
+        self.flattened_size = self._get_flattened_size((3, 300, 225))
+        self.fc = nn.Linear(in_features=self.flattened_size, out_features=num_classes)
+
+    def _get_flattened_size(self, shape):
+        x = torch.zeros(1, *shape)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        return int(torch.prod(torch.tensor(x.shape[1:])))
 
     def forward(self, x):
-        return self.model(x)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.drop(x)
+        x = x.view(-1, self.flattened_size)
+        x = self.fc(x)
+        return F.log_softmax(x, dim=1)
 
-# Set device
 device = "cuda" if torch.cuda.is_available() else "cpu"
+model = Model(num_classes=3).to(device)
+print(model)
 
-# Initialize model, loss function, optimizer, and learning rate scheduler
-model = ResNet50Model(num_classes=3).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=0.0001)
 scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.2, verbose=True)
 
-# Define transforms for data augmentation and normalization
-transform = transforms.Compose([
-    #transforms.Resize(img_size),
-    #transforms.RandomHorizontalFlip(),
-    #transforms.RandomVerticalFlip(),
-    #transforms.RandomRotation(20),
-    #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-    #Stransforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-
-# Create datasets and dataloaders
-train_dataset = torchvision.datasets.ImageFolder(root=training_folder_name, transform=transform)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=False)
-
-# Early stopping
-class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
-        self.patience = patience
-        self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.val_loss_min = np.Inf
-        self.delta = delta
-        self.path = path
-        self.trace_func = trace_func
-
-    def __call__(self, val_loss, model):
-        score = -val_loss
-
-        if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            if self.verbose:
-                self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience:
-                self.early_stop = True
-        else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-            self.counter = 0
-
-    def save_checkpoint(self, val_loss, model):
-        if self.verbose:
-            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), self.path)
-        self.val_loss_min = val_loss
-
-early_stopping = EarlyStopping(patience=10, verbose=True, path=os.path.join(model_path, 'checkpoint.pt'))
-
-# Training and validation loop
-def train(model, device, train_loader, optimizer, epoch, loss_criteria, scheduler=None):
+def train(model, device, train_loader, optimizer, epoch, loss_criteria):
     model.train()
     train_loss = 0
     correct = 0
@@ -117,8 +81,6 @@ def train(model, device, train_loader, optimizer, epoch, loss_criteria, schedule
         _, predicted = output.max(1)
         total += target.size(0)
         correct += predicted.eq(target).sum().item()
-        if scheduler:
-            scheduler.step(train_loss)
         if (batch_idx + 1) % 10 == 0 or batch_idx == len(train_loader) - 1:
             print(f'\tTraining batch {batch_idx + 1}/{len(train_loader)} Loss: {loss.item():.6f}')
     avg_loss = train_loss / len(train_loader)
@@ -137,13 +99,29 @@ def test(model, device, test_loader, loss_criteria):
             output = model(data)
             loss = loss_criteria(output, target)
             test_loss += loss.item()
-            _, predicted = output.max(1)
+            _, predicted = torch.max(output, 1)
             total += target.size(0)
             correct += predicted.eq(target).sum().item()
     avg_loss = test_loss / len(test_loader)
     accuracy = 100. * correct / total
     print(f'Validation set: Average loss: {avg_loss:.6f}, Accuracy: {accuracy:.2f}%\n')
     return avg_loss, accuracy
+
+# Define transforms for data augmentation and normalization
+transform = transforms.Compose([
+    transforms.Resize(img_size),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+# Create datasets and dataloaders
+dataset = torchvision.datasets.ImageFolder(root=training_folder_name, transform=transform)
+train_size = int(0.8 * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
 
 # Track metrics in these lists
 epoch_nums = []
@@ -153,24 +131,32 @@ validation_loss = []
 validation_accuracy = []
 
 # Number of epochs to train
-epochs = 10  # Adjust this number as needed
+epochs = 25  # Adjust this number as needed
 print('Training on', device)
 
-for epoch in range(1, epochs + 1):
-    train_loss, train_acc = train(model, device, train_loader, optimizer, epoch, criterion, scheduler)
+for epoch in range(1, epochs + 5):
+    train_loss, train_acc = train(model, device, train_loader, optimizer, epoch, criterion)
     test_loss, test_acc = test(model, device, test_loader, criterion)
     epoch_nums.append(epoch)
     training_loss.append(train_loss)
     training_accuracy.append(train_acc)
     validation_loss.append(test_loss)
     validation_accuracy.append(test_acc)
-    early_stopping(test_loss, model)
-    if early_stopping.early_stop:
-        print("Early stopping")
-        break
+    scheduler.step(test_loss)
 
-# Load the best model
-model.load_state_dict(torch.load(os.path.join(model_path, 'checkpoint.pt')))
+# Ensure model save path exists
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
+
+# Save trained model
+torch.save(model.state_dict(), model_path)
+print('Save Successful')
+
+# Load model
+new_model = Model(num_classes=len(classes)).to(device)
+new_model.load_state_dict(torch.load(model_path, map_location=device))
+new_model.eval()
+print('Load successful')
 
 # Plotting the training and validation loss
 plt.figure(figsize=(10, 5))
@@ -191,14 +177,3 @@ plt.ylabel('Accuracy (%)')
 plt.legend()
 plt.title('Training and Validation Accuracy Over Epochs')
 plt.show()
-
-# Save the final model
-model_save_path = os.path.join(model_path, 'Trained_model.pt')
-torch.save(model.state_dict(), model_save_path)
-print('Save Successful')
-
-# Load the model
-new_model = ResNet50Model(num_classes=len(classes)).to(device)
-new_model.load_state_dict(torch.load(model_save_path, map_location=device))
-new_model.eval()
-print('Load successful')
