@@ -7,21 +7,23 @@ import os
 from torchvision.models import ResNet50_Weights
 import torch.nn.functional as F
 
-# Prompt user for the path to the image and the model
-image_path = input('Please enter the path to the image: ')
-model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/Model/3_Main_82%_Model_Resnet.pt'  # Update model filename if needed
+# Directories
+image_path = input('Please enter the path to the image: ') # promts user to give the directory of their image
+model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/Model/3_Main_82%_Model_Resnet.pt'  # model filename
+
 # Define the image size
-img_size = (300, 225)  # ResNet50 typically uses 224x224 input size
-# Define classes
-classes = ['akiec', 'bcc', 'mel']
+img_size = (300, 225) 
+
+# Classes
+classes = ['akiec', 'bcc', 'mel'] # 3 main types
 num_classes = len(classes)
 
-# Set device
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# Device
+device = "cuda" if torch.cuda.is_available() else "cpu" # checks if the computer is compatible with cuda
 
-# Define transforms for the input image (resize and normalize)
+# Transforms the input image 
 input_transform = transforms.Compose([
-    transforms.Resize(img_size),
+    transforms.Resize(img_size), # rezises the given to 300,225
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -29,13 +31,13 @@ input_transform = transforms.Compose([
 class ResNetModel(nn.Module):
     def __init__(self, num_classes=3):
         super(ResNetModel, self).__init__()
-        self.model = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        self.model = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1) # calls the resnet model through torchvision
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
     def forward(self, x):
         return self.model(x)
 
-# Load the trained model
+# Load trained model
 model = ResNetModel(num_classes=num_classes).to(device)
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()
@@ -43,7 +45,6 @@ model.eval()
 # Function to predict the class of an input image
 def predict_image(image_path, model, device, transform, classes):
     image = Image.open(image_path).convert('RGB')
-    # Resize the image to (300, 225)
     image = image.resize(img_size)
     image = transform(image).unsqueeze(0).to(device)
     model.eval()

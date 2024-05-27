@@ -12,20 +12,21 @@ import torch.nn.functional as F
 from torchvision import models
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# Define the path to the training folder
-training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
-model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
+# The path to the training folder
+training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning' # file of all the training data
+model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model' # Location of where the model gets saved to
+
 # Define the image size
 img_size = (300, 225)
 
 # List the classes from the training folder
-classes = ['akiec', 'bcc', 'mel']
+classes = ['akiec', 'bcc', 'mel'] # 3 main classes 
 num_classes = len(classes)
 print("Classes:", classes)
 
 print("Libraries imported - ready to use PyTorch", torch.__version__)
 
-# Use a more complex pretrained model (ResNet50)
+# Use of ResNet50 (pretrained model) 
 class ResNet50Model(nn.Module):
     def __init__(self, num_classes=3):
         super(ResNet50Model, self).__init__()
@@ -36,7 +37,7 @@ class ResNet50Model(nn.Module):
         return self.model(x)
 
 # Set device
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu" # checks if the computer is compatible with cuda
 
 # Initialize model, loss function, optimizer, and learning rate scheduler
 model = ResNet50Model(num_classes=3).to(device)
@@ -46,14 +47,8 @@ scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.2, ver
 
 # Define transforms for data augmentation and normalization
 transform = transforms.Compose([
-    #transforms.Resize(img_size),
-    #transforms.RandomHorizontalFlip(),
-    #transforms.RandomVerticalFlip(),
-    #transforms.RandomRotation(20),
-    #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-    #Stransforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # normalizes the pixel values of an image by subtracting the mean and dividing by the standard deviation for each channel
 ])
 
 # Create datasets and dataloaders
@@ -67,7 +62,7 @@ class EarlyStopping:
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
-        self.best_score = None
+        self.best_score = None          
         self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
@@ -91,7 +86,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
             self.counter = 0
 
-    def save_checkpoint(self, val_loss, model):
+    def save_checkpoint(self, val_loss, model): # Saves the best model through out the training process
         if self.verbose:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
@@ -153,7 +148,7 @@ validation_loss = []
 validation_accuracy = []
 
 # Number of epochs to train
-epochs = 10  # Adjust this number as needed
+epochs = 10  # Number of iterations
 print('Training on', device)
 
 for epoch in range(1, epochs + 1):

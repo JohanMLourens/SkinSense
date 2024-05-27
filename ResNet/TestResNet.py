@@ -10,14 +10,15 @@ import matplotlib.pyplot as plt
 from torchvision import models
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 
-# Define the path to the testing folder
+# Path to the testing folder
 testing_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/TestDataResized'
 model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/Model'
 
-# Define the image size
-img_size = (300, 225)  # ResNet50 typically uses 224x224 input size
-model_save_path = os.path.join(model_path, '3_Main_82%_Model_Resnet.pt')  # Update model filename
-# Define classes
+# The image size
+img_size = (300, 225)  
+model_save_path = os.path.join(model_path, '3_Main_82%_Model_Resnet.pt')
+
+# Classes
 classes = ['akiec', 'bcc', 'mel']
 num_classes = len(classes)
 
