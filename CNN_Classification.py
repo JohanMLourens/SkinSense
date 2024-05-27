@@ -148,6 +148,10 @@ for epoch in range(1, epochs + 5):
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
+# Save trained model
+torch.save(model.state_dict(), model_path)
+print('Save Successful')
+
 # Load model
 new_model = Model(num_classes=len(classes)).to(device)
 new_model.load_state_dict(torch.load(model_path, map_location=device))
@@ -172,4 +176,4 @@ plt.xlabel('Epochs')
 plt.ylabel('Accuracy (%)')
 plt.legend()
 plt.title('Training and Validation Accuracy Over Epochs')
-
+plt.show()
