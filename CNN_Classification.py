@@ -15,7 +15,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 training_folder_name = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinCancerData/ResizedTrainning'
 model_path = 'C:/Users/S_CSIS-Postgrad/Desktop/AI Project/SkinSense/Model'
 # Define the image size
-img_size = (299, 299)  # Inception v3 requires a minimum input size of 299x299
+img_size = (300, 300)  # Inception v3 requires a minimum input size of 299x299
 
 # List the classes from the training folder
 classes = ['akiec', 'bcc', 'mel']
